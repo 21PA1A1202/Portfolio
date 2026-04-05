@@ -13,6 +13,7 @@ Portfolio - https://charan-adhikari-portfolio.vercel.app/
 - Compact profile modal with skills, education, and links
 - Contact form powered by Web3Forms
 
+
 ## Tech Stack
 
 - Vue 3
