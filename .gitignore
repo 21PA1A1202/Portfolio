@@ -15,5 +15,6 @@ pnpm-debug.log*
 
 .vite/
 .cache/
+.vercel/
 .idea/
 .vscode/

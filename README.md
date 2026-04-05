@@ -63,6 +63,12 @@ Create a `.env` file in the project root:
 VITE_GOOGLE_API_KEY=your_google_api_key_here
 ```
 
+You can also copy from:
+
+```bash
+cp .env.example .env
+```
+
 ### Start development
 
 ```bash
@@ -80,6 +86,25 @@ npm run build
 ```bash
 npm run preview
 ```
+
+## Vercel Deployment
+
+This project is configured for Vercel with [vercel.json](/Users/haricharan/Portfolio/vercel.json).
+
+### Deploy steps
+
+1. Import the repository into Vercel
+2. Vercel should detect it as a Vite project automatically
+3. Set the environment variable `VITE_GOOGLE_API_KEY` in the Vercel project settings
+4. Deploy
+
+### Expected Vercel settings
+
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Node.js: `18+`
+
+If Bee AI is enabled in production, remember that `VITE_GOOGLE_API_KEY` is exposed to the client bundle. For a more secure production setup, move Gemini calls behind a backend or serverless function.
 
 ## Customization
 
