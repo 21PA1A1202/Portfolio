@@ -22,7 +22,7 @@
               @click="$emit('start')"
               class="intro-button"
             >
-              Continue
+              Enter Portfolio
             </button>
           </div>
         </div>
