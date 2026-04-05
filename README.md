@@ -2,6 +2,8 @@
 
 A cinematic personal portfolio built with Vue 3, Vite, and Tailwind CSS. The site includes an animated intro, interactive single-page sections, a floating Bee AI assistant, a compact profile view, project showcases, experience timeline, certificates carousel, and a contact form.
 
+Portfolio - https://charan-adhikari-portfolio.vercel.app/
+
 ## Features
 
 - Animated intro flow with a Spline-powered hero
