@@ -48,6 +48,7 @@ type BeeRuntimeImports = {
 const GEMINI_MODEL = 'gemini-2.5-flash-lite'
 const MAX_RATE_LIMIT_RETRIES = 2
 const RATE_LIMIT_RETRY_DELAYS_MS = [1800, 4200]
+const MAX_CONVERSATION_TURNS = 4
 
 const SECTION_CHOICES = [
   'about',
@@ -70,60 +71,19 @@ const beeCapabilities = [
 
 const portfolioContext = [
   `Name: ${portfolio.fullName}`,
-  `Primary role: ${portfolio.role}`,
+  `Role: ${portfolio.role}`,
   `Headline: ${portfolio.headline}`,
   `Summary: ${portfolio.summary}`,
-  `About: ${portfolio.about}`,
   `Location: ${portfolio.location}`,
-  `Email: ${portfolio.email}`,
-  `Phone: ${portfolio.phone}`,
-  '',
-  'Social links:',
-  ...portfolio.socials.map((social) => `- ${social.label}: ${social.href} (${social.value})`),
-  '',
-  'Hero highlights:',
-  ...portfolio.heroStats.map((stat) => `- ${stat.label}: ${stat.value}`),
-  '',
-  'Education:',
-  ...portfolio.education.map(
-    (item) => `- ${item.school} | ${item.note} | ${item.period} | ${item.score}`
-  ),
-  '',
-  'Skill groups:',
-  ...portfolio.skillGroups.map(
-    (group) => `- ${group.title}: ${group.summary}. Skills: ${group.items.join(', ')}`
-  ),
-  '',
-  `Support skills: ${portfolio.supportSkills.join(', ')}`,
-  '',
-  'Experience:',
-  ...portfolio.experience.map((item) => [
-    `- ${item.company} | ${item.role} | ${item.period} | ${item.location}`,
-    `  Summary: ${item.summary}`,
-    `  Highlights: ${item.highlights.join(' | ')}`
-  ].join('\n')),
-  '',
-  'Achievements:',
-  ...portfolio.achievements.map((achievement) => `- ${achievement.title} | ${achievement.meta}`),
-  '',
-  'Projects:',
-  ...portfolio.projects.map((project) => [
-    `- ${project.title} | ${project.category}`,
-    `  Summary: ${project.summary}`,
-    `  Stack: ${project.stack.join(', ')}`,
-    `  Repo: ${project.repo ?? 'Not listed'}`,
-    `  Live: ${project.live ?? 'Not listed'}`
-  ].join('\n')),
-  '',
-  'Certificates:',
-  ...portfolio.certificates.map(
-    (certificate) => `- ${certificate.title} | ${certificate.issuer} | ${certificate.date}`
-  ),
-  '',
-  `Interests: ${portfolio.interests.join(', ')}`,
-  '',
-  'Bee capabilities:',
-  beeCapabilities
+  `Contact: ${portfolio.email} | ${portfolio.phone}`,
+  `Current focus: ${portfolio.heroStats.map((item) => `${item.label} - ${item.value}`).join(' | ')}`,
+  `Core skills: ${portfolio.skillGroups.flatMap((group) => group.items).slice(0, 18).join(', ')}`,
+  `Experience: ${portfolio.experience.map((item) => `${item.company} - ${item.role} (${item.period})`).join(' | ')}`,
+  `Projects: ${portfolio.projects.map((project) => `${project.title} [${project.category}]`).join(' | ')}`,
+  `Certificates: ${portfolio.certificates.map((certificate) => `${certificate.title} - ${certificate.issuer}`).join(' | ')}`,
+  `Education: ${portfolio.education.map((item) => `${item.school} - ${item.note} (${item.score})`).join(' | ')}`,
+  `Profiles: ${portfolio.socials.map((social) => `${social.label} - ${social.href}`).join(' | ')}`,
+  `Bee capabilities: ${beeCapabilities}`
 ].join('\n')
 
 const beeSystemPrompt = `
@@ -237,7 +197,7 @@ async function getBeeModel() {
       model: GEMINI_MODEL,
       apiKey,
       temperature: 0.25,
-      maxOutputTokens: 700
+      maxOutputTokens: 320
     }))
   }
 
@@ -285,6 +245,14 @@ function createToolResultMessage(input: {
   }
 
   return lines.join('\n')
+}
+
+function joinToolReplies(toolReplies: string[]) {
+  return toolReplies
+    .map((reply) => reply.trim())
+    .filter(Boolean)
+    .join(' ')
+    .trim()
 }
 
 function navigationReply(destination: BeeDestination) {
@@ -464,7 +432,7 @@ export async function runBeeAgent(input: {
 
     const messages = [
       new SystemMessage(beeSystemPrompt),
-      ...input.conversation.slice(-10).map((turn) => (
+      ...input.conversation.slice(-MAX_CONVERSATION_TURNS).map((turn) => (
         turn.role === 'user'
           ? new HumanMessage(turn.content)
           : new AIMessage(turn.content)
@@ -473,14 +441,12 @@ export async function runBeeAgent(input: {
     ]
 
     let assistantMessage = createAssistantMessage(AIMessage, await invokeWithRetry(llmWithTools, messages))
-    let safetyCounter = 0
     let lastNavigationDestination: BeeDestination | null = null
+    const toolReplies: string[] = []
 
-    while (assistantMessage.tool_calls?.length && safetyCounter < 4) {
-      messages.push(assistantMessage)
-
+    if (assistantMessage.tool_calls?.length) {
       for (const [index, toolCall] of assistantMessage.tool_calls.entries()) {
-        const toolCallId = toolCall.id ?? `${toolCall.name}-${safetyCounter}-${index}`
+        const toolCallId = toolCall.id ?? `${toolCall.name}-0-${index}`
         let status: 'success' | 'error' = 'success'
         let toolResult = 'Done.'
 
@@ -553,10 +519,16 @@ export async function runBeeAgent(input: {
           tool_call_id: toolCallId,
           status
         }))
+
+        toolReplies.push(toolResult)
       }
 
-      assistantMessage = createAssistantMessage(AIMessage, await invokeWithRetry(llmWithTools, messages))
-      safetyCounter += 1
+      return {
+        reply: finalizeBeeReply(
+          joinToolReplies(toolReplies),
+          lastNavigationDestination
+        ) || "I'm ready. Ask me about Hari Charan, his projects, experience, certificates, or let me draft an email for you."
+      }
     }
 
     return {

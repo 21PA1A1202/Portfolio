@@ -82,9 +82,12 @@
           class="absolute inset-0 h-full w-full border-0"
         ></iframe>
         <div class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-slate-950 via-slate-950/65 to-transparent"></div>
-        <div class="absolute bottom-5 right-4 z-20">
+        <div class="ask-ai-stack absolute bottom-5 right-4 z-20">
+          <div class="ask-ai-tip">
+            This is my assistant. Ask anything about me.
+          </div>
           <button type="button" class="ask-ai-chip" @click="openBeeAssistant">
-            <BrainCircuit class="h-5 w-5" />
+            <BeeIcon class="h-10 w-10 " />
             <span>Talk to Bee AI</span>
           </button>
         </div>
@@ -617,7 +620,6 @@
       <footer class="border-t border-cyan-400/10 bg-slate-950/65">
         <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-6 text-sm text-slate-300/65 sm:flex-row sm:items-center sm:justify-between lg:px-8">
           <span>© {{ year }} {{ portfolio.name }}. All rights reserved.</span>
-          <span>Software Developer Portfolio focused on frontend, AI, and full-stack engineering.</span>
         </div>
       </footer>
       </template>
@@ -673,6 +675,7 @@ import {
 import IntroSequence from './IntroSequence.vue'
 import IntroStart from './IntroStart.vue'
 import Profile from './Profile.vue'
+import BeeIcon from './BeeIcon.vue'
 import { portfolio } from '../data/portfolio'
 import type { BeeContactState, BeeDestination } from '../lib/beeAgent'
 
@@ -1263,14 +1266,14 @@ onBeforeUnmount(() => {
 .ask-ai-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
   border-radius: 0.6rem;
   border: 1px solid rgba(34, 211, 238, 0.2);
   background: rgba(12, 74, 110);
-  padding: 0.45rem 1.5rem;
+  padding: 0.45rem 0.5rem;
+  gap:0.2rem;
   color: rgba(103, 232, 249, 0.9);
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.2rem;
+  font-size: 1.0rem;
   letter-spacing: 0.08em;
   cursor: pointer;
   box-shadow:
@@ -1286,6 +1289,46 @@ onBeforeUnmount(() => {
   transform: translateY(-2px);
   border-color: rgba(103, 232, 249, 0.34);
   background: rgb(10 64 94 / 1);
+}
+
+.ask-ai-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.7rem;
+}
+
+.ask-ai-tip {
+  position: relative;
+  max-width: 18rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(103, 232, 249, 0.16);
+  background:
+    linear-gradient(rgba(103, 232, 249, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 232, 249, 0.03) 1px, transparent 1px),
+    rgba(4, 12, 22, 0.82);
+  background-size: 18px 18px, 18px 18px, auto;
+  padding: 0.8rem 0.95rem;
+  color: rgba(226, 232, 240, 0.92);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.28),
+    0 0 18px rgba(34, 211, 238, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.ask-ai-tip::after {
+  content: '';
+  position: absolute;
+  right: 1.35rem;
+  top: 100%;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-right: 1px solid rgba(103, 232, 249, 0.16);
+  border-bottom: 1px solid rgba(103, 232, 249, 0.16);
+  background: rgba(4, 12, 22, 0.9);
+  transform: translateY(-45%) rotate(45deg);
 }
 
 .section-shell {
@@ -1921,6 +1964,12 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
+  .ask-ai-tip {
+    max-width: 13.5rem;
+    padding: 0.68rem 0.8rem;
+    font-size: 0.72rem;
+  }
+
   .ask-ai-chip {
     font-size: 1rem;
   }

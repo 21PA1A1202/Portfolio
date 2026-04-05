@@ -16,11 +16,11 @@
         >
           <div class="bee-brand">
             <div class="bee-brand-icon">
-              <BrainCircuit class="h-5 w-5" />
+              <BeeIcon class="h-10 w-10" />
             </div>
             <div>
               <div class="bee-title">Bee AI</div>
-              <div class="bee-subtitle">Interactive assistant for Hari Charan</div>
+              <div class="bee-subtitle">This is my assistant. Ask anything about me.</div>
             </div>
           </div>
 
@@ -88,7 +88,6 @@
         </div>
 
         <footer class="bee-footer">
-          <div class="bee-footer-note">Drag the bottom-right corner to resize.</div>
 
           <div class="bee-composer">
             <textarea
@@ -96,7 +95,7 @@
               v-model="draftMessage"
               rows="2"
               class="bee-input"
-              placeholder="Ask about Hari Charan, projects, certificates, or draft an email..."
+              placeholder="Ask about my projects, certificates, or draft an email..."
               @keydown="handleComposerKeydown"
             ></textarea>
 
@@ -118,7 +117,8 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { BrainCircuit, Info, SendHorizonal, X } from 'lucide-vue-next'
+import { Info, SendHorizonal, X } from 'lucide-vue-next'
+import BeeIcon from './BeeIcon.vue'
 import { runBeeAgent } from '../lib/beeAgent'
 import type { BeeAgentHandlers, BeeChatTurn, BeeContactState } from '../lib/beeAgent'
 
@@ -142,7 +142,7 @@ const emit = defineEmits<{
 }>()
 
 const capabilities = [
-  "Explain Hari Charan's experience, skills, projects, and certificates.",
+  "Explain my experience, skills, projects, and certificates.",
   'Jump to sections like Projects, Experience, Certificates, Contact, and About.',
   'Open the profile summary when you want a compact overview.',
   'Draft a polished email directly into the contact form.',
@@ -447,7 +447,7 @@ onBeforeUnmount(() => {
   position: fixed;
   right: 1.2rem;
   bottom: 1.2rem;
-  z-index: 80;
+  z-index: 10010;
 }
 
 .bee-shell-dragging {
