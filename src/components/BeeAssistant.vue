@@ -233,6 +233,7 @@ let suppressLauncherClick = false
 let launcherPositionFrame: number | null = null
 let pendingLauncherPosition: { left: number; top: number } | null = null
 let launcherSnapTimer: ReturnType<typeof setTimeout> | null = null
+let beeWindowResizeObserver: ResizeObserver | null = null
 
 const LAUNCHER_SNAP_DURATION_MS = 220
 
@@ -279,6 +280,8 @@ async function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
 }
 
 function focusComposer() {
+  if (isCompactViewport.value) return
+
   composerRef.value?.focus()
 }
 
@@ -391,17 +394,21 @@ async function ensureBeePosition(forceReset = false) {
   await nextTick()
 
   if (isCompactViewport.value) return
-  if (!forceReset && beePosition.value.left !== null && beePosition.value.top !== null) return
 
   const rect = beeWindowRef.value?.getBoundingClientRect()
   const width = rect?.width ?? 496
   const height = rect?.height ?? 624
   const margin = getViewportMargin()
 
-  beePosition.value = clampBeePosition(
-    window.innerWidth - width - margin,
-    window.innerHeight - height - margin
-  )
+  if (forceReset || beePosition.value.left === null || beePosition.value.top === null) {
+    beePosition.value = clampBeePosition(
+      window.innerWidth - width - margin,
+      window.innerHeight - height - margin
+    )
+    return
+  }
+
+  beePosition.value = clampBeePosition(beePosition.value.left, beePosition.value.top)
 }
 
 async function ensureLauncherPosition(forceReset = false) {
@@ -641,6 +648,21 @@ watch(
 )
 
 watch(
+  beeWindowRef,
+  (windowEl, previousWindowEl) => {
+    if (!beeWindowResizeObserver) return
+
+    if (previousWindowEl) {
+      beeWindowResizeObserver.unobserve(previousWindowEl)
+    }
+
+    if (windowEl) {
+      beeWindowResizeObserver.observe(windowEl)
+    }
+  }
+)
+
+watch(
   () => messages.value.length,
   async () => {
     if (props.visible) {
@@ -713,6 +735,18 @@ if (typeof window !== 'undefined') {
 
 onMounted(() => {
   void ensureLauncherPosition(true)
+
+  if (typeof ResizeObserver !== 'undefined') {
+    beeWindowResizeObserver = new ResizeObserver(() => {
+      if (!props.visible || isCompactViewport.value || isDragging.value) return
+
+      void ensureBeePosition()
+    })
+
+    if (beeWindowRef.value) {
+      beeWindowResizeObserver.observe(beeWindowRef.value)
+    }
+  }
 })
 
 onBeforeUnmount(() => {
@@ -723,6 +757,9 @@ onBeforeUnmount(() => {
   if (launcherSnapTimer) {
     clearTimeout(launcherSnapTimer)
   }
+
+  beeWindowResizeObserver?.disconnect()
+  beeWindowResizeObserver = null
 
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', handleViewportResize)
@@ -823,9 +860,9 @@ onBeforeUnmount(() => {
   width: min(31rem, calc(100vw - 1.6rem));
   min-width: 22rem;
   max-width: min(38rem, calc(100vw - 1.6rem));
-  height: min(39rem, calc(100vh - 1.8rem));
+  height: min(39rem, calc(100dvh - 1.8rem));
   min-height: 26rem;
-  max-height: calc(100vh - 1.6rem);
+  max-height: calc(100dvh - 1.6rem);
   flex-direction: column;
   overflow: hidden;
   resize: both;
@@ -1176,7 +1213,8 @@ onBeforeUnmount(() => {
     min-width: 0;
     max-width: none;
     min-height: 24rem;
-    height: min(34rem, calc(100vh - 1.5rem));
+    height: min(34rem, calc(100dvh - 1.5rem));
+    max-height: calc(100dvh - 1.5rem);
     resize: none;
   }
 
