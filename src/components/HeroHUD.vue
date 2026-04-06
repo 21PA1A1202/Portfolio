@@ -6,13 +6,13 @@
       v-if="introDone"
       class="fixed inset-x-0 top-0 z-50 "
     >
-      <div class="mx-auto flex max-w-8xl items-center justify-between border-b border-cyan-400/15 bg-slate-950/75 px-4 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-        <button class="text-left" @click="scrollTo('home')">
-          <div class="font-display text uppercase tracking-[0.45em] text-cyan-300/80">{{ portfolio.name }}</div>
-          <div class="mt-1 text-base font-semibold text-white sm:text-lg">Software Developer</div>
+      <div class="mx-auto flex min-h-[4.5rem] max-w-8xl items-center justify-between gap-3 border-b border-cyan-400/15 bg-slate-950/75 px-4 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:gap-4">
+        <button class="nav-brand" @click="scrollTo('home')">
+          <div class="nav-brand-name">{{ portfolio.name }}</div>
+          <div class="nav-brand-role">Software Developer</div>
         </button>
 
-        <div class="hidden items-center gap-2 lg:flex">
+        <div class="hidden items-center gap-1.5 xl:flex 2xl:gap-2">
           <button
             v-for="item in navItems"
             :key="item.label"
@@ -24,7 +24,7 @@
           </button>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 items-center gap-2">
           <a
             :href="portfolio.resumeUrl"
             target="_blank"
@@ -34,7 +34,7 @@
             <FileText class="h-4 w-4" />
             Resume
           </a>
-          <button class="mobile-toggle lg:hidden" @click="isMenuOpen = !isMenuOpen">
+          <button class="mobile-toggle xl:hidden" @click="isMenuOpen = !isMenuOpen">
             <Menu class="h-5 w-5" />
           </button>
         </div>
@@ -43,7 +43,7 @@
       <transition name="menu-fade">
         <div
           v-if="isMenuOpen"
-          class="mx-auto mt-3 max-w-7xl rounded-3xl border border-cyan-400/15 bg-slate-950/90 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl lg:hidden"
+          class="mx-auto mt-3 max-w-7xl rounded-3xl border border-cyan-400/15 bg-slate-950/90 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl xl:hidden"
         >
           <div class="grid gap-2">
             <button
@@ -1520,6 +1520,39 @@ onBeforeUnmount(() => {
     color 260ms ease;
 }
 
+.nav-brand {
+  display: flex;
+  max-width: min(62vw, 24rem);
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  flex-shrink: 1;
+  text-align: left;
+}
+
+.nav-brand-name {
+  font-family: 'Orbitron', sans-serif;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  text-transform: uppercase;
+  line-height: 1.12;
+  color: rgba(103, 232, 249, 0.8);
+  font-size: clamp(0.62rem, 0.58rem + 0.28vw, 0.84rem);
+  letter-spacing: clamp(0.08em, 0.05em + 0.12vw, 0.18em);
+}
+
+.nav-brand-role {
+  margin-top: 0.32rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: clamp(0.9rem, 0.84rem + 0.24vw, 1.1rem);
+  font-weight: 600;
+  line-height: 1.05;
+  color: white;
+}
+
 .nav-chip {
   border: 1px solid rgba(103, 232, 249, 0.1);
   background: rgba(6, 10, 18, 0.3);
@@ -1528,6 +1561,28 @@ onBeforeUnmount(() => {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(226, 232, 240, 0.84);
+}
+
+@media (min-width: 1280px) and (max-width: 1480px) {
+  .nav-brand {
+    max-width: min(26vw, 22rem);
+  }
+
+  .nav-chip {
+    padding: 0.68rem 0.82rem;
+    font-size: 0.67rem;
+    letter-spacing: 0.14em;
+  }
+}
+
+@media (max-width: 639px) {
+  .nav-brand {
+    max-width: calc(100vw - 6rem);
+  }
+
+  .nav-brand-role {
+    display: none;
+  }
 }
 
 .nav-chip:hover,
