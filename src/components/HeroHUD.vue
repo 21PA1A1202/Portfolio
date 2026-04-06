@@ -626,13 +626,14 @@
     </div>
 
     <BeeAssistant
-      v-if="beeMounted"
       :visible="isBeeOpen"
+      :show-launcher="introDone"
       :contact-state="beeContactState"
       :navigate-to="navigateBee"
       :draft-email="draftBeeEmail"
       :update-sender="updateBeeSender"
       :send-email="sendBeeEmail"
+      @open="openBeeAssistant"
       @close="isBeeOpen = false"
     />
     <Profile :visible="showProfile" @close="showProfile = false" />
@@ -687,7 +688,6 @@ const introStarted = ref(false)
 const introDone = ref(false)
 const showProfile = ref(false)
 const isMenuOpen = ref(false)
-const beeMounted = ref(false)
 const isBeeOpen = ref(false)
 
 const aboutRef = ref<HTMLElement | null>(null)
@@ -717,7 +717,6 @@ const sectionVisible = reactive<Record<SectionKey, boolean>>({
   art: false,
   contact: false
 })
-
 const skillIcons = {
   programming: Code2,
   frontend: PanelsTopLeft,
@@ -871,7 +870,6 @@ const scrollTo = (id: string) => {
 }
 
 function openBeeAssistant() {
-  beeMounted.value = true
   isBeeOpen.value = true
 }
 
@@ -1207,6 +1205,7 @@ watch(
       return
     }
 
+    isBeeOpen.value = false
     sectionObserver?.disconnect()
     stopCertificateAutoplay()
     stopExperienceTracking()

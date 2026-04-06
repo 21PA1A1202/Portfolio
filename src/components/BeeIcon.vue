@@ -34,13 +34,10 @@ const iconLoadFailed = ref(false)
   line-height: 1;
 }
 
-.bee-icon-image,{
+.bee-icon-shell img {
   display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.bee-icon-image {
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
 }
 

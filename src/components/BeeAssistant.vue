@@ -1,8 +1,34 @@
 <template>
+  <button
+    ref="beeLauncherRef"
+    v-if="showLauncher && !visible"
+    type="button"
+    class="bee-launcher"
+    :class="{
+      'bee-launcher-dragging': isLauncherDragging,
+      'bee-launcher-snapping': isLauncherSnapping,
+      'bee-launcher-open': visible
+    }"
+    :style="beeLauncherStyle"
+    :aria-expanded="visible"
+    aria-controls="bee-assistant-window"
+    aria-label="Open Bee AI chat"
+    @pointerdown="beginLauncherDrag"
+    @click="handleLauncherClick"
+  >
+    <img
+      src="/BeeAI.png"
+      alt=""
+      class="bee-launcher-image"
+      draggable="false"
+    />
+  </button>
+
   <transition name="bee-float">
     <aside
       ref="beeShellRef"
       v-show="visible"
+      id="bee-assistant-window"
       class="bee-shell"
       :class="{ 'bee-shell-dragging': isDragging }"
       :style="beeShellStyle"
@@ -88,7 +114,6 @@
         </div>
 
         <footer class="bee-footer">
-
           <div class="bee-composer">
             <textarea
               ref="composerRef"
@@ -116,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Info, SendHorizonal, X } from 'lucide-vue-next'
 import BeeIcon from './BeeIcon.vue'
 import { runBeeAgent } from '../lib/beeAgent'
@@ -130,6 +155,7 @@ type BeeUiMessage = {
 
 const props = defineProps<{
   visible: boolean
+  showLauncher?: boolean
   contactState: BeeContactState
   navigateTo: BeeAgentHandlers['navigateTo']
   draftEmail: BeeAgentHandlers['draftEmail']
@@ -138,6 +164,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  open: []
   close: []
 }>()
 
@@ -180,16 +207,34 @@ const isDragging = ref(false)
 const isCompactViewport = ref(false)
 const messagesViewport = ref<HTMLElement | null>(null)
 const composerRef = ref<HTMLTextAreaElement | null>(null)
+const beeLauncherRef = ref<HTMLButtonElement | null>(null)
 const beeShellRef = ref<HTMLElement | null>(null)
 const beeWindowRef = ref<HTMLElement | null>(null)
 const beePosition = ref<{ left: number | null; top: number | null }>({
   left: null,
   top: null
 })
+const beeLauncherPosition = ref<{ left: number | null; top: number | null }>({
+  left: null,
+  top: null
+})
+const isLauncherDragging = ref(false)
+const isLauncherSnapping = ref(false)
 
 let activePointerId: number | null = null
 let dragOffsetX = 0
 let dragOffsetY = 0
+let activeLauncherPointerId: number | null = null
+let launcherDragOffsetX = 0
+let launcherDragOffsetY = 0
+let launcherDragStartX = 0
+let launcherDragStartY = 0
+let suppressLauncherClick = false
+let launcherPositionFrame: number | null = null
+let pendingLauncherPosition: { left: number; top: number } | null = null
+let launcherSnapTimer: ReturnType<typeof setTimeout> | null = null
+
+const LAUNCHER_SNAP_DURATION_MS = 220
 
 const beeShellStyle = computed(() => {
   if (isCompactViewport.value || beePosition.value.left === null || beePosition.value.top === null) {
@@ -199,6 +244,19 @@ const beeShellStyle = computed(() => {
   return {
     left: `${beePosition.value.left}px`,
     top: `${beePosition.value.top}px`,
+    right: 'auto',
+    bottom: 'auto'
+  }
+})
+
+const beeLauncherStyle = computed(() => {
+  if (beeLauncherPosition.value.left === null || beeLauncherPosition.value.top === null) {
+    return undefined
+  }
+
+  return {
+    left: `${beeLauncherPosition.value.left}px`,
+    top: `${beeLauncherPosition.value.top}px`,
     right: 'auto',
     bottom: 'auto'
   }
@@ -226,6 +284,21 @@ function focusComposer() {
 
 function getViewportMargin() {
   return isCompactViewport.value ? 12 : 20
+}
+
+function getLauncherMetrics() {
+  const rect = beeLauncherRef.value?.getBoundingClientRect()
+  const width = rect && rect.width > 0 ? rect.width : 72
+  const height = rect && rect.height > 0 ? rect.height : 72
+  const margin = isCompactViewport.value ? 10 : 12
+
+  return {
+    width,
+    height,
+    margin,
+    maxLeft: Math.max(margin, window.innerWidth - width - margin),
+    maxTop: Math.max(margin, window.innerHeight - height - margin)
+  }
 }
 
 function updateViewportMode() {
@@ -258,6 +331,59 @@ function clampBeePosition(left: number, top: number) {
   }
 }
 
+function clampLauncherPosition(left: number, top: number) {
+  if (typeof window === 'undefined') {
+    return { left, top }
+  }
+
+  const { margin, maxLeft, maxTop } = getLauncherMetrics()
+
+  return {
+    left: Math.min(Math.max(left, margin), maxLeft),
+    top: Math.min(Math.max(top, margin), maxTop)
+  }
+}
+
+function snapLauncherPosition(left: number, top: number) {
+  if (typeof window === 'undefined') {
+    return { left, top }
+  }
+
+  const clamped = clampLauncherPosition(left, top)
+  const { margin, maxLeft, maxTop } = getLauncherMetrics()
+
+  const nearestEdge = [
+    {
+      edge: 'left',
+      distance: Math.abs(clamped.left - margin)
+    },
+    {
+      edge: 'right',
+      distance: Math.abs(maxLeft - clamped.left)
+    },
+    {
+      edge: 'top',
+      distance: Math.abs(clamped.top - margin)
+    },
+    {
+      edge: 'bottom',
+      distance: Math.abs(maxTop - clamped.top)
+    }
+  ].sort((a, b) => a.distance - b.distance)[0]?.edge
+
+  switch (nearestEdge) {
+    case 'left':
+      return { left: margin, top: clamped.top }
+    case 'top':
+      return { left: clamped.left, top: margin }
+    case 'bottom':
+      return { left: clamped.left, top: maxTop }
+    case 'right':
+    default:
+      return { left: maxLeft, top: clamped.top }
+  }
+}
+
 async function ensureBeePosition(forceReset = false) {
   if (typeof window === 'undefined') return
 
@@ -278,6 +404,50 @@ async function ensureBeePosition(forceReset = false) {
   )
 }
 
+async function ensureLauncherPosition(forceReset = false) {
+  if (typeof window === 'undefined') return
+
+  await nextTick()
+
+  if (!forceReset && beeLauncherPosition.value.left !== null && beeLauncherPosition.value.top !== null) return
+
+  const { width, height, maxLeft } = getLauncherMetrics()
+
+  beeLauncherPosition.value = snapLauncherPosition(
+    maxLeft,
+    Math.max(0, (window.innerHeight - height) / 2)
+  )
+}
+
+function flushLauncherPositionUpdate() {
+  if (pendingLauncherPosition) {
+    beeLauncherPosition.value = pendingLauncherPosition
+    pendingLauncherPosition = null
+  }
+
+  if (launcherPositionFrame !== null && typeof window !== 'undefined') {
+    window.cancelAnimationFrame(launcherPositionFrame)
+    launcherPositionFrame = null
+  }
+}
+
+function scheduleLauncherPositionUpdate(position: { left: number; top: number }) {
+  pendingLauncherPosition = position
+
+  if (launcherPositionFrame !== null || typeof window === 'undefined') {
+    return
+  }
+
+  launcherPositionFrame = window.requestAnimationFrame(() => {
+    launcherPositionFrame = null
+
+    if (!pendingLauncherPosition) return
+
+    beeLauncherPosition.value = pendingLauncherPosition
+    pendingLauncherPosition = null
+  })
+}
+
 function stopDrag() {
   if (typeof window === 'undefined') return
 
@@ -293,6 +463,39 @@ function stopDrag() {
   window.removeEventListener('pointercancel', stopDrag)
 }
 
+function stopLauncherDrag() {
+  if (typeof window === 'undefined') return
+
+  isLauncherDragging.value = false
+  flushLauncherPositionUpdate()
+
+  if (activeLauncherPointerId !== null) {
+    beeLauncherRef.value?.releasePointerCapture?.(activeLauncherPointerId)
+    activeLauncherPointerId = null
+  }
+
+  if (beeLauncherPosition.value.left !== null && beeLauncherPosition.value.top !== null) {
+    if (launcherSnapTimer) {
+      clearTimeout(launcherSnapTimer)
+    }
+
+    isLauncherSnapping.value = true
+    beeLauncherPosition.value = snapLauncherPosition(
+      beeLauncherPosition.value.left,
+      beeLauncherPosition.value.top
+    )
+
+    launcherSnapTimer = setTimeout(() => {
+      isLauncherSnapping.value = false
+      launcherSnapTimer = null
+    }, LAUNCHER_SNAP_DURATION_MS)
+  }
+
+  window.removeEventListener('pointermove', handleLauncherDragMove)
+  window.removeEventListener('pointerup', stopLauncherDrag)
+  window.removeEventListener('pointercancel', stopLauncherDrag)
+}
+
 function handleDragMove(event: PointerEvent) {
   if (!isDragging.value || isCompactViewport.value) return
 
@@ -300,6 +503,24 @@ function handleDragMove(event: PointerEvent) {
     event.clientX - dragOffsetX,
     event.clientY - dragOffsetY
   )
+}
+
+function handleLauncherDragMove(event: PointerEvent) {
+  if (!isLauncherDragging.value) return
+
+  isLauncherSnapping.value = false
+
+  if (
+    !suppressLauncherClick
+    && Math.hypot(event.clientX - launcherDragStartX, event.clientY - launcherDragStartY) > 6
+  ) {
+    suppressLauncherClick = true
+  }
+
+  scheduleLauncherPositionUpdate(clampLauncherPosition(
+    event.clientX - launcherDragOffsetX,
+    event.clientY - launcherDragOffsetY
+  ))
 }
 
 function beginDrag(event: PointerEvent) {
@@ -325,13 +546,59 @@ function beginDrag(event: PointerEvent) {
   window.addEventListener('pointercancel', stopDrag)
 }
 
+function beginLauncherDrag(event: PointerEvent) {
+  if (event.button !== 0) return
+
+  const launcherRect = beeLauncherRef.value?.getBoundingClientRect()
+  if (!launcherRect) return
+
+  event.preventDefault()
+  flushLauncherPositionUpdate()
+
+  if (launcherSnapTimer) {
+    clearTimeout(launcherSnapTimer)
+    launcherSnapTimer = null
+  }
+
+  activeLauncherPointerId = event.pointerId
+  beeLauncherRef.value?.setPointerCapture?.(event.pointerId)
+  launcherDragOffsetX = event.clientX - launcherRect.left
+  launcherDragOffsetY = event.clientY - launcherRect.top
+  launcherDragStartX = event.clientX
+  launcherDragStartY = event.clientY
+  suppressLauncherClick = false
+  isLauncherSnapping.value = false
+  isLauncherDragging.value = true
+
+  window.addEventListener('pointermove', handleLauncherDragMove)
+  window.addEventListener('pointerup', stopLauncherDrag)
+  window.addEventListener('pointercancel', stopLauncherDrag)
+}
+
+function handleLauncherClick() {
+  if (suppressLauncherClick) {
+    suppressLauncherClick = false
+    return
+  }
+
+  emit('open')
+}
+
 async function handleViewportResize() {
   const wasCompact = isCompactViewport.value
   updateViewportMode()
 
+  if (beeLauncherPosition.value.left !== null && beeLauncherPosition.value.top !== null) {
+    beeLauncherPosition.value = snapLauncherPosition(
+      beeLauncherPosition.value.left,
+      beeLauncherPosition.value.top
+    )
+  } else {
+    await ensureLauncherPosition(wasCompact)
+  }
+
   if (isCompactViewport.value) {
     stopDrag()
-    return
   }
 
   if (wasCompact) {
@@ -353,12 +620,23 @@ watch(
     if (!visible) {
       showInfoTooltip.value = false
       stopDrag()
+      await nextTick()
+      await ensureLauncherPosition()
       return
     }
 
     await ensureBeePosition()
     await scrollToBottom('auto')
     focusComposer()
+  }
+)
+
+watch(
+  () => props.showLauncher,
+  (showLauncher) => {
+    if (showLauncher === false) {
+      stopLauncherDrag()
+    }
   }
 )
 
@@ -433,8 +711,18 @@ if (typeof window !== 'undefined') {
   window.addEventListener('resize', handleViewportResize)
 }
 
+onMounted(() => {
+  void ensureLauncherPosition(true)
+})
+
 onBeforeUnmount(() => {
   stopDrag()
+  stopLauncherDrag()
+  flushLauncherPositionUpdate()
+
+  if (launcherSnapTimer) {
+    clearTimeout(launcherSnapTimer)
+  }
 
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', handleViewportResize)
@@ -443,6 +731,82 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.bee-launcher {
+  --bee-launcher-size: 3.5rem;
+  position: fixed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  top: calc(50vh - (var(--bee-launcher-size) / 2));
+  right: 0.75rem;
+  width: var(--bee-launcher-size);
+  height: var(--bee-launcher-size);
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(103, 232, 249, 0.28);
+  background:
+    linear-gradient(180deg, rgba(10, 17, 28, 0.96), rgba(6, 12, 22, 0.96));
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, 0.18),
+    0 12px 30px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 28px rgba(34, 211, 238, 0.16);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  will-change: left, top, transform;
+  z-index: 10020;
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
+}
+
+.bee-launcher:hover {
+  transform: translateY(-1px) scale(1.02);
+  border-color: rgba(103, 232, 249, 0.42);
+  box-shadow:
+    0 0 26px rgba(34, 211, 238, 0.34),
+    0 18px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 40px rgba(34, 211, 238, 0.3);
+}
+
+.bee-launcher-open {
+  border-color: rgba(34, 211, 238, 0.48);
+}
+
+.bee-launcher-dragging {
+  cursor: grabbing;
+  transition: none !important;
+}
+
+.bee-launcher-snapping {
+  transition:
+    left 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    top 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease;
+}
+
+.bee-launcher-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.18));
+  pointer-events: none;
+}
+
+.bee-launcher:hover .bee-launcher-image {
+  filter:
+    drop-shadow(0 0 10px rgba(250, 204, 21, 0.26))
+    drop-shadow(0 0 18px rgba(34, 211, 238, 0.16));
+}
+
 .bee-shell {
   position: fixed;
   right: 1.2rem;
@@ -796,6 +1160,11 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
+  .bee-launcher {
+    --bee-launcher-size: 3.15rem;
+    padding: 0.16rem;
+  }
+
   .bee-shell {
     left: 0.75rem;
     right: 0.75rem;
@@ -821,6 +1190,7 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .bee-launcher,
   .bee-icon-button,
   .bee-shortcut,
   .bee-send,
