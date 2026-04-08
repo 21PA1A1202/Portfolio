@@ -46,7 +46,7 @@
           class="absolute inset-[8%] z-0 overflow-hidden rounded-full intro-portal"
           :class="{ 'intro-portal-open': doorsOpen, 'intro-portal-enter': handoff }"
         >
-          <div
+          <div 
             class="intro-portal-visual"
             :class="{ 'intro-portal-visual-enter': handoff }"
           ></div>
