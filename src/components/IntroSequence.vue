@@ -46,10 +46,13 @@
           class="absolute inset-[8%] z-0 overflow-hidden rounded-full intro-portal"
           :class="{ 'intro-portal-open': doorsOpen, 'intro-portal-enter': handoff }"
         >
-          <div 
-            class="intro-portal-visual"
-            :class="{ 'intro-portal-visual-enter': handoff }"
-          ></div>
+          <iframe
+            :src="heroSceneUrl"
+            frameborder="0"
+            loading="eager"
+            class="intro-portal-frame"
+            :class="{ 'intro-portal-frame-enter': handoff }"
+          ></iframe>
           <div class="absolute inset-0 bg-gradient-to-b from-cyan-300/10 via-transparent to-black/20"></div>
         </div>
 
@@ -100,6 +103,7 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 const emit = defineEmits(['completed'])
 
 const sentence = 'welcome to my portfolio.'
+const heroSceneUrl = 'https://my.spline.design/thresholddarkambientui-gwvaPilEOywrJqpAK5XxoaTi/'
 const TYPEWRITER_START_MS = 1000
 const TYPEWRITER_DURATION_MS = 3000
 const LASER_SOUND_TIMES = [4660, 5050, 5550]
@@ -368,36 +372,18 @@ onBeforeUnmount(() => {
   transform: scale(1.24);
   filter: saturate(1.08) brightness(1.04);
 }
-.intro-portal-visual {
+.intro-portal-frame {
   position: absolute;
   inset: -35%;
   width: 170%;
   height: 170%;
-  background:
-    radial-gradient(circle at 32% 32%, rgba(34, 211, 238, 0.48), transparent 18%),
-    radial-gradient(circle at 68% 38%, rgba(59, 130, 246, 0.38), transparent 22%),
-    radial-gradient(circle at 50% 72%, rgba(16, 185, 129, 0.2), transparent 18%),
-    linear-gradient(rgba(103, 232, 249, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(103, 232, 249, 0.028) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(3, 7, 14, 0.96), rgba(6, 12, 22, 0.92));
-  background-size: auto, auto, auto, 30px 30px, 30px 30px, auto;
+  border: 0;
+  pointer-events: none;
   transform: scale(1);
   transition: transform 1.35s cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
 }
-
-.intro-portal-visual::after {
-  content: '';
-  position: absolute;
-  inset: 12%;
-  border-radius: 999px;
-  border: 1px solid rgba(103, 232, 249, 0.18);
-  box-shadow:
-    0 0 28px rgba(34, 211, 238, 0.14),
-    inset 0 0 26px rgba(255, 255, 255, 0.03);
-}
-
-.intro-portal-visual-enter {
+.intro-portal-frame-enter {
   transform: scale(1.04);
 }
 .intro-shell {

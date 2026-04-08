@@ -1,6 +1,6 @@
 <template>
   <div class="portfolio-shell min-h-screen overflow-x-hidden text-slate-100">
-    <IntroStart v-if="!introStarted && !introDone" @start="handleIntroStart" />
+    <IntroStart v-if="!introStarted && !introDone" @start="introStarted = true" />
 
     <nav
       v-if="introDone"
@@ -75,20 +75,12 @@
       :class="introStarted || introDone ? 'opacity-100' : 'pointer-events-none opacity-0'"
     >
       <section id="home" class="relative min-h-screen overflow-hidden">
-        <div class="hero-backdrop absolute inset-0"></div>
-        <div
-          v-if="introStarted"
-          class="hero-scene-shell absolute inset-0"
-          :class="{ 'hero-scene-shell-loaded': heroSceneLoaded }"
-        >
-          <iframe
-            :src="heroSceneUrl"
-            frameborder="0"
-            loading="eager"
-            class="absolute inset-0 h-full w-full border-0"
-            @load="markHeroSceneReady"
-          ></iframe>
-        </div>
+        <iframe
+          src="https://my.spline.design/thresholddarkambientui-gwvaPilEOywrJqpAK5XxoaTi/"
+          frameborder="0"
+          loading="eager"
+          class="absolute inset-0 h-full w-full border-0"
+        ></iframe>
         <div class="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-slate-950 via-slate-950/65 to-transparent"></div>
         <div class="ask-ai-stack absolute bottom-5 right-4 z-20">
           <div class="ask-ai-tip">
@@ -122,8 +114,6 @@
               src="/black bg.png"
               alt="Decorative art"
               class="about-art"
-              loading="lazy"
-              decoding="async"
             />
           </div>
         </div>
@@ -244,13 +234,7 @@
             >
               <div class="project-media">
                 <template v-if="isProjectImageReady(project)">
-                  <img
-                    :src="projectImageSource(project)"
-                    :alt="project.title"
-                    class="project-cover-image"
-                    loading="lazy"
-                    decoding="async"
-                  />
+                  <img :src="projectImageSource(project)" :alt="project.title" class="project-cover-image" />
                 </template>
                 <template v-else>
                   <div class="project-placeholder" aria-hidden="true"></div>
@@ -346,13 +330,7 @@
                 <div class="timeline-content">
                   <div class="flex flex-wrap items-start justify-between gap-4">
                     <div class="flex items-center gap-4">
-                      <img
-                        :src="role.logo"
-                        :alt="role.company"
-                        class="h-12 w-12 rounded-2xl border border-cyan-300/15 object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
+                      <img :src="role.logo" :alt="role.company" class="h-12 w-12 rounded-2xl border border-cyan-300/15 object-cover" />
                       <div>
                         <div class="text-xs uppercase tracking-[0.35em] text-cyan-300/50">{{ role.period }}</div>
                         <h3 class="mt-2 text-xl font-semibold text-white">{{ role.company }}</h3>
@@ -419,8 +397,6 @@
                         :src="certificate.image"
                         :alt="certificate.title"
                         class="h-full w-full object-contain"
-                        loading="lazy"
-                        decoding="async"
                         draggable="false"
                       />
                       <div v-else class="cert-fallback">
@@ -481,8 +457,6 @@
                   :src="img"
                   :alt="`UI concept ${index + 1}`"
                   class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
-                  loading="lazy"
-                  decoding="async"
                   draggable="false"
                 />
               </article>
@@ -668,7 +642,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import {
   ArrowUpRight,
   AtSign,
@@ -707,21 +681,14 @@ import { portfolio } from '../data/portfolio'
 import type { BeeContactState, BeeDestination } from '../lib/beeAgent'
 
 type SectionKey = 'about' | 'skills' | 'projects' | 'experience' | 'certificates' | 'art' | 'contact'
-type NetworkInformationLike = {
-  saveData?: boolean
-  effectiveType?: string
-}
 
 const BeeAssistant = defineAsyncComponent(() => import('./BeeAssistant.vue'))
 const year = new Date().getFullYear()
-const heroSceneUrl = 'https://my.spline.design/thresholddarkambientui-gwvaPilEOywrJqpAK5XxoaTi/'
 const introStarted = ref(false)
 const introDone = ref(false)
 const showProfile = ref(false)
 const isMenuOpen = ref(false)
 const isBeeOpen = ref(false)
-const heroSceneLoaded = ref(false)
-const shouldSkipIntro = ref(false)
 
 const aboutRef = ref<HTMLElement | null>(null)
 const skillsRef = ref<HTMLElement | null>(null)
@@ -897,54 +864,6 @@ function skillItemBadge(item: string) {
     .toUpperCase()
 }
 
-function clearHeroSceneFallbackTimer() {
-  if (heroSceneFallbackTimer) {
-    clearTimeout(heroSceneFallbackTimer)
-    heroSceneFallbackTimer = null
-  }
-}
-
-function markHeroSceneReady() {
-  clearHeroSceneFallbackTimer()
-  heroSceneLoaded.value = true
-}
-
-function scheduleHeroSceneFallback() {
-  clearHeroSceneFallbackTimer()
-  heroSceneFallbackTimer = setTimeout(() => {
-    heroSceneLoaded.value = true
-    heroSceneFallbackTimer = null
-  }, 1800)
-}
-
-function evaluateStartupMode() {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return
-
-  const connection = (navigator as Navigator & { connection?: NetworkInformationLike }).connection
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const isSmallScreen = window.matchMedia('(max-width: 768px)').matches
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches
-  const slowNetwork = typeof connection?.effectiveType === 'string'
-    ? ['slow-2g', '2g', '3g'].includes(connection.effectiveType)
-    : false
-  const limitedCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4
-
-  shouldSkipIntro.value =
-    prefersReducedMotion
-    || connection?.saveData === true
-    || slowNetwork
-    || (isSmallScreen && (coarsePointer || limitedCpu))
-
-  if (shouldSkipIntro.value) {
-    introStarted.value = true
-    introDone.value = true
-  }
-}
-
-function handleIntroStart() {
-  introStarted.value = true
-}
-
 const scrollTo = (id: string) => {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   isMenuOpen.value = false
@@ -976,7 +895,6 @@ function isProjectImageReady(project: { image?: string; imagePath: string }) {
 let experienceFrame: number | null = null
 let experienceTrackingActive = false
 let experienceLineTimer: ReturnType<typeof setTimeout> | null = null
-let heroSceneFallbackTimer: ReturnType<typeof setTimeout> | null = null
 
 function clamp(value: number, min = 0, max = 1) {
   return Math.min(Math.max(value, min), max)
@@ -1297,30 +1215,10 @@ watch(
   { immediate: true }
 )
 
-watch(introStarted, (started) => {
-  if (!started) {
-    clearHeroSceneFallbackTimer()
-    heroSceneLoaded.value = false
-    return
-  }
-
-  heroSceneLoaded.value = false
-  scheduleHeroSceneFallback()
-})
-
-onMounted(() => {
-  evaluateStartupMode()
-
-  if (introStarted.value) {
-    scheduleHeroSceneFallback()
-  }
-})
-
 onBeforeUnmount(() => {
   sectionObserver?.disconnect()
   stopCertificateAutoplay()
   stopExperienceTracking()
-  clearHeroSceneFallbackTimer()
 })
 </script>
 
@@ -1362,43 +1260,6 @@ onBeforeUnmount(() => {
   background:
     radial-gradient(circle at 20% 20%, rgba(34, 211, 238, 0.18), transparent 25%),
     linear-gradient(180deg, rgba(3, 7, 14, 0.2) 0%, rgba(3, 7, 14, 0.52) 45%, rgba(3, 7, 14, 0.9) 100%);
-}
-
-.hero-backdrop {
-  background:
-    radial-gradient(circle at 18% 22%, rgba(34, 211, 238, 0.24), transparent 24%),
-    radial-gradient(circle at 78% 16%, rgba(14, 165, 233, 0.24), transparent 22%),
-    radial-gradient(circle at 52% 78%, rgba(16, 185, 129, 0.12), transparent 18%),
-    linear-gradient(rgba(103, 232, 249, 0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(103, 232, 249, 0.025) 1px, transparent 1px),
-    linear-gradient(180deg, #02060c 0%, #07101b 42%, #050913 100%);
-  background-size: auto, auto, auto, 34px 34px, 34px 34px, auto;
-}
-
-.hero-scene-shell {
-  opacity: 0;
-  pointer-events: auto;
-  transition: opacity 620ms ease;
-  will-change: opacity;
-}
-
-.hero-scene-shell-loaded {
-  opacity: 1;
-}
-
-.hero-stat-card {
-  border: 1px solid rgba(103, 232, 249, 0.14);
-  border-radius: 1.4rem;
-  background:
-    linear-gradient(rgba(103, 232, 249, 0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(103, 232, 249, 0.018) 1px, transparent 1px),
-    rgba(5, 11, 20, 0.62);
-  background-size: 24px 24px, 24px 24px, auto;
-  padding: 1rem 1.05rem;
-  box-shadow:
-    0 20px 45px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(14px);
 }
 
 .ask-ai-chip {
@@ -1471,8 +1332,6 @@ onBeforeUnmount(() => {
 
 .section-shell {
   padding: 5.5rem 1.5rem;
-  content-visibility: auto;
-  contain-intrinsic-size: 900px;
 }
 
 .section-shell-alt {
@@ -2159,10 +2018,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
-  .hero-stat-card {
-    padding: 0.95rem 1rem;
-  }
-
   .ask-ai-tip {
     max-width: 13.5rem;
     padding: 0.68rem 0.8rem;
