@@ -302,13 +302,13 @@ export const portfolio = {
       title: 'Leadership Excellence Certificate',
       issuer: 'Emerging Lions Leadership Institute',
       date: 'September 2023',
-      image: '/Screenshot 2025-08-15 at 10.41.22 PM.png'
+      image: '/elli.jpg'
     },
     {
       title: 'Data Science Internship Certificate',
       issuer: 'Unified Mentor',
       date: 'December 2024',
-      image: '/Screenshot 2025-08-15 at 10.41.49 PM.png'
+      image: '/Screenshot 2025-08-15 at 10.41.22 PM.png'
     },
     {
       title: 'Programming in C-Language',
